@@ -1,0 +1,14 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "default",
+      "binaryDir": "build",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "OpenMP_ROOT": "/opt/homebrew/opt/libomp",
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
+      }
+    }
+  ]
+}

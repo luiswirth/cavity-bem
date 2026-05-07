@@ -1,0 +1,6 @@
+.DS_Store
+.cache/
+build/
+CMakeCache.txt
+CMakeFiles/
+out/
