@@ -125,6 +125,8 @@ int main(int argc, char *argv[]) {
   if (argc > 3) refinement = std::stoi(argv[3]);
   if (argc > 4) poly_deg = std::stoi(argv[4]);
 
+  std::filesystem::create_directories("out");
+
   Config config = load_config(config_path);
   double k = config.k;
   complex wavenumber(-k, 0.0);
@@ -181,6 +183,7 @@ int main(int argc, char *argv[]) {
     std::cout << "  dipole " << d + 1 << "/" << n_dipoles
               << "  GMRES iters: " << gmres.iterations() << "\n";
   }
+  write_complex_matrix("out/Es_all.dat", Es_all);
 
   MatrixXcd T(n_dipoles, n_dipoles);
   for (int r = 0; r < n_points; ++r) {
@@ -198,7 +201,6 @@ int main(int argc, char *argv[]) {
   double rel_asym = (T - T.transpose()).norm() / T.norm();
   std::cout << "\n||T - T^T||_F / ||T||_F = " << rel_asym << "\n";
 
-  std::filesystem::create_directories("out");
   write_complex_matrix("out/T_matrix.dat", T);
 
   std::cout << "wrote out/T_matrix.dat (" << n_dipoles << " x " << n_dipoles << ")\n";
