@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 
   Config config = load_config(config_path);
   double k = config.k;
-  complex wavenumber(-k, 0.0);
+  complex wavenumber(k, 0.0);
   int n_points = config.points.rows();
   int n_dipoles = 2 * n_points;
 
@@ -183,6 +183,10 @@ int main(int argc, char *argv[]) {
     std::cout << "  dipole " << d + 1 << "/" << n_dipoles
               << "  GMRES iters: " << gmres.iterations() << "\n";
   }
+
+  // Bembel works in the e^{-iωt} convention; conjugate to match e^{+iωt}.
+  Es_all = Es_all.conjugate();
+
   write_complex_matrix("out/Es_all.dat", Es_all);
 
   MatrixXcd T(n_dipoles, n_dipoles);
