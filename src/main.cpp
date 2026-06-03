@@ -128,6 +128,7 @@ int main(int argc, char *argv[]) {
   std::filesystem::create_directories("out");
 
   Config config = load_config(config_path);
+
   double k = config.k;
   complex wavenumber(k, 0.0);
   int n_points = config.points.rows();
@@ -150,16 +151,14 @@ int main(int argc, char *argv[]) {
   std::cout << "  dipoles:     " << n_dipoles << "\n";
 
   std::cout << "\nAssembling operator..." << std::flush;
+
+
   AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
-  DiscreteOperator<H2Matrix<complex>, MaxwellSingleLayerOperator> disc_op(ansatz_space);
+  DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
   disc_op.get_linear_operator().set_wavenumber(wavenumber);
   disc_op.compute();
-  std::cout << " done.\n";
 
-  GMRES<H2Matrix<complex>, IdentityPreconditioner> gmres;
-  gmres.compute(disc_op.get_discrete_operator());
-  gmres.set_restart(2000);
-  gmres.setTolerance(1e-8);
+  PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
 
   DiscretePotential<MaxwellSingleLayerPotential<MaxwellSingleLayerOperator>,
                     MaxwellSingleLayerOperator>
@@ -167,22 +166,26 @@ int main(int argc, char *argv[]) {
   disc_pot.get_potential().set_wavenumber(wavenumber);
 
   MatrixXcd Es_all(n_points, 3 * n_dipoles);
+
+  const int N = ansatz_space.get_number_of_dofs();
+  MatrixXcd B(N, n_dipoles);
   for (int d = 0; d < n_dipoles; ++d) {
     const std::function<VectorXcd(Vector3d)> neg_Ei =
         [&, d](Vector3d x) -> VectorXcd { return -incident_field(x, z[d], k, pol[d]); };
-
     DiscreteLinearForm<RotatedTangentialTrace<complex>, MaxwellSingleLayerOperator>
         disc_lf(ansatz_space);
     disc_lf.get_linear_form().set_function(neg_Ei);
     disc_lf.compute();
-
-    VectorXcd rho = gmres.solve(disc_lf.get_discrete_linear_form());
-    disc_pot.set_cauchy_data(rho);
-    Es_all.block(0, 3 * d, n_points, 3) = disc_pot.evaluate(config.points);
-
-    std::cout << "  dipole " << d + 1 << "/" << n_dipoles
-              << "  GMRES iters: " << gmres.iterations() << "\n";
+    B.col(d) = disc_lf.get_discrete_linear_form();
   }
+
+  MatrixXcd Rho = lu.solve(B);   // all RHS at once
+
+  for (int d = 0; d < n_dipoles; ++d) {
+    disc_pot.set_cauchy_data(Rho.col(d));
+    Es_all.block(0, 3 * d, n_points, 3) = disc_pot.evaluate(config.points);
+  }
+
 
   // Bembel works in the e^{-iωt} convention; conjugate to match e^{+iωt}.
   Es_all = Es_all.conjugate();
@@ -208,5 +211,6 @@ int main(int argc, char *argv[]) {
   write_complex_matrix("out/T_matrix.dat", T);
 
   std::cout << "wrote out/T_matrix.dat (" << n_dipoles << " x " << n_dipoles << ")\n";
+
   return 0;
 }
