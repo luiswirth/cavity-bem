@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <complex>
 #include <fstream>
 #include <iomanip>
@@ -168,6 +169,9 @@ int main(int argc, char *argv[]) {
   MatrixXcd Es_all(n_points, 3 * n_dipoles);
 
   const int N = ansatz_space.get_number_of_dofs();
+  std::cout << "  dofs:        " << N << " (dense matrix ~"
+            << (16.0 * double(N) * double(N) / 1e9) << " GB)\n"
+            << std::flush;
   MatrixXcd B(N, n_dipoles);
   for (int d = 0; d < n_dipoles; ++d) {
     const std::function<VectorXcd(Vector3d)> neg_Ei =

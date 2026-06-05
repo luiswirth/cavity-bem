@@ -4,11 +4,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# tell CMake where Homebrew's libomp lives
-set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
-set(OpenMP_CXX_LIB_NAMES "omp")
-set(OpenMP_omp_LIBRARY /opt/homebrew/opt/libomp/lib/libomp.dylib)
-include_directories(/opt/homebrew/opt/libomp/include)
+# macOS: point CMake at Homebrew's libomp. On Linux (e.g. Euler) the compiler's
+# own OpenMP is found by the standard find_package below.
+if(APPLE)
+  set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
+  set(OpenMP_CXX_LIB_NAMES "omp")
+  set(OpenMP_omp_LIBRARY /opt/homebrew/opt/libomp/lib/libomp.dylib)
+  include_directories(/opt/homebrew/opt/libomp/include)
+endif()
 
 find_package(OpenMP REQUIRED)
 
