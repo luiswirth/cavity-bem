@@ -120,11 +120,13 @@ int main(int argc, char *argv[]) {
   std::string sphere_dat = "res/sphere.dat";
   int refinement = 1;
   int poly_deg = 2;
+  std::string solver = "dense";
 
   if (argc > 1) config_path = argv[1];
   if (argc > 2) sphere_dat = argv[2];
   if (argc > 3) refinement = std::stoi(argv[3]);
   if (argc > 4) poly_deg = std::stoi(argv[4]);
+  if (argc > 5) solver = argv[5];
 
   std::filesystem::create_directories("out");
 
@@ -145,33 +147,21 @@ int main(int argc, char *argv[]) {
     pol[2 * i + 1] = config.e2.row(i);
   }
 
+  AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
+  const int N = ansatz_space.get_number_of_dofs();
+
   std::cout << "=== PEC Ellipsoidal Cavity BEM Solver ===\n";
   std::cout << "  k:           " << k << "\n";
   std::cout << "  refinement:  " << refinement << "\n";
   std::cout << "  poly degree: " << poly_deg << "\n";
   std::cout << "  dipoles:     " << n_dipoles << "\n";
+  std::cout << "  dofs:        " << N << "\n";
+  std::cout << "  solver:      " << solver
+            << (solver == "dense"
+                    ? " (dense matrix ~" + std::to_string(16.0 * double(N) * double(N) / 1e9) + " GB)"
+                    : "")
+            << "\n" << std::flush;
 
-  std::cout << "\nAssembling operator..." << std::flush;
-
-
-  AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
-  DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
-  disc_op.get_linear_operator().set_wavenumber(wavenumber);
-  disc_op.compute();
-
-  PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
-
-  DiscretePotential<MaxwellSingleLayerPotential<MaxwellSingleLayerOperator>,
-                    MaxwellSingleLayerOperator>
-      disc_pot(ansatz_space);
-  disc_pot.get_potential().set_wavenumber(wavenumber);
-
-  MatrixXcd Es_all(n_points, 3 * n_dipoles);
-
-  const int N = ansatz_space.get_number_of_dofs();
-  std::cout << "  dofs:        " << N << " (dense matrix ~"
-            << (16.0 * double(N) * double(N) / 1e9) << " GB)\n"
-            << std::flush;
   MatrixXcd B(N, n_dipoles);
   for (int d = 0; d < n_dipoles; ++d) {
     const std::function<VectorXcd(Vector3d)> neg_Ei =
@@ -183,7 +173,37 @@ int main(int argc, char *argv[]) {
     B.col(d) = disc_lf.get_discrete_linear_form();
   }
 
-  MatrixXcd Rho = lu.solve(B);   // all RHS at once
+  std::cout << "\nAssembling operator (" << solver << ") and solving..." << std::flush;
+
+  // The Maxwell single-layer (EFIE) is first-kind and badly conditioned, so an
+  // unpreconditioned iterative solve is hopeless. Instead use the H2 path only to
+  // dodge the dense-assembly memory blow-up at high poly_deg: assemble compressed,
+  // materialize the (small) operator, then factor and direct-solve as usual.
+  MatrixXcd Rho(N, n_dipoles);
+  if (solver == "h2") {
+    DiscreteOperator<H2Matrix<complex>, MaxwellSingleLayerOperator> disc_op(ansatz_space);
+    disc_op.get_linear_operator().set_wavenumber(wavenumber);
+    disc_op.compute();
+    std::cout << " [H2 assembled, materializing]" << std::flush;
+    const auto &H = disc_op.get_discrete_operator();
+    MatrixXcd M(N, N);
+    for (int j = 0; j < N; ++j) M.col(j) = H * VectorXcd::Unit(N, j);
+    PartialPivLU<MatrixXcd> lu(M);
+    Rho = lu.solve(B);
+  } else {
+    DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
+    disc_op.get_linear_operator().set_wavenumber(wavenumber);
+    disc_op.compute();
+    PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
+    Rho = lu.solve(B);
+  }
+
+  DiscretePotential<MaxwellSingleLayerPotential<MaxwellSingleLayerOperator>,
+                    MaxwellSingleLayerOperator>
+      disc_pot(ansatz_space);
+  disc_pot.get_potential().set_wavenumber(wavenumber);
+
+  MatrixXcd Es_all(n_points, 3 * n_dipoles);
 
   for (int d = 0; d < n_dipoles; ++d) {
     disc_pot.set_cauchy_data(Rho.col(d));
