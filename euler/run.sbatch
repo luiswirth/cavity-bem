@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=bem
+#SBATCH --account=ls_math
 #SBATCH --output=bem_results/slurm-%A_%a.log
 #SBATCH --time=04:00:00
 #SBATCH --ntasks=1
