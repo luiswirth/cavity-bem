@@ -28,6 +28,6 @@ log=$("$ROOT/build/my_project" "$ROOT/res/config.txt" "$ROOT/res/sphere.dat" "$M
 secs=$((SECONDS-t0)); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
 recip=$(echo "$log" | grep -oE '/ \|\|T\|\|_F = [0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
-cp out/T_matrix.dat "$R/T_bem_ell_p${P}_m${M}.dat"
+cp out/T_matrix.dat "$R/T_bem_p${P}_m${M}.dat"
 echo "ell,${P},${M},${dofs},${recip},${secs}" >> "$R/manifest.csv"
 echo "done p${P}m${M}: dofs=$dofs recip=$recip secs=$secs"
