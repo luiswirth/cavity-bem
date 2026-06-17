@@ -175,6 +175,10 @@ int main(int argc, char *argv[]) {
   disc_op.get_linear_operator().set_wavenumber(wavenumber);
   disc_op.compute();
   PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
+  // Cheap 1-norm reciprocal condition estimate of the EFIE system matrix (reuses
+  // the LU; no extra factorization), reported alongside EP-GP's system cond.
+  double cond_sys = 1.0 / lu.rcond();
+  std::cout << "cond(A) = " << cond_sys << "\n" << std::flush;
   MatrixXcd Rho = lu.solve(B);
 
   DiscretePotential<MaxwellSingleLayerPotential<MaxwellSingleLayerOperator>,
@@ -208,8 +212,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  double rel_asym = (T - T.transpose()).norm() / T.norm();
-  std::cout << "\n||T - T^T||_F / ||T||_F = " << rel_asym << "\n";
+  double norm_T = T.norm();
+  double rel_asym = (T - T.transpose()).norm() / norm_T;
+  std::cout << "\n||T||_F = " << norm_T << "\n";
+  std::cout << "||T - T^T||_F / ||T||_F = " << rel_asym << "\n";
 
   write_complex_matrix("out/T_matrix.dat", T);
 
