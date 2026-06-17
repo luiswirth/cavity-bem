@@ -26,7 +26,8 @@ work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
 t0=$SECONDS
 # /usr/bin/time -v captures peak resident set size; binary stdout goes to run.log,
 # the time report to time.txt (kept separate so the log parsing is unaffected).
-/usr/bin/time -v -o "$work/time.txt" "$ROOT/build/my_project" \
+export OMP_PROC_BIND=close OMP_PLACES=cores
+srun --cpu-bind=cores /usr/bin/time -v -o "$work/time.txt" "$ROOT/build/my_project" \
   "$ROOT/res/config.txt" "$ROOT/res/sphere.dat" "$M" "$P" > "$work/run.log" 2>&1
 secs=$((SECONDS-t0)); log=$(cat "$work/run.log"); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
