@@ -34,4 +34,6 @@ recip=$(echo "$log" | grep -oE '/ \|\|T\|\|_F = [0-9.eE+-]+' | grep -oE '[0-9.eE
 maxrss=$(grep -i "Maximum resident set size" "$work/time.txt" | grep -oE '[0-9]+' || true)
 cp out/T_matrix.dat "$R/T_bem_p${P}_m${M}.dat"
 echo "ell,${P},${M},${dofs},${recip},${secs},${maxrss}" >> "$R/manifest.csv"
+commit=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
+echo "${commit},$(hostname),${P},${M},$(date -Is),${SLURM_CPUS_PER_TASK}" >> "$R/provenance.csv"
 echo "done p${P}m${M}: dofs=$dofs recip=$recip secs=$secs maxrss_kb=$maxrss"
