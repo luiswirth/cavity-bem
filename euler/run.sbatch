@@ -24,10 +24,14 @@ line=$(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY_TASK_ID}
 read -r P M <<< "$line"
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
 t0=$SECONDS
-log=$("$ROOT/build/my_project" "$ROOT/res/config.txt" "$ROOT/res/sphere.dat" "$M" "$P")
-secs=$((SECONDS-t0)); echo "$log"
+# /usr/bin/time -v captures peak resident set size; binary stdout goes to run.log,
+# the time report to time.txt (kept separate so the log parsing is unaffected).
+/usr/bin/time -v -o "$work/time.txt" "$ROOT/build/my_project" \
+  "$ROOT/res/config.txt" "$ROOT/res/sphere.dat" "$M" "$P" > "$work/run.log" 2>&1
+secs=$((SECONDS-t0)); log=$(cat "$work/run.log"); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
 recip=$(echo "$log" | grep -oE '/ \|\|T\|\|_F = [0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
+maxrss=$(grep -i "Maximum resident set size" "$work/time.txt" | grep -oE '[0-9]+' || true)
 cp out/T_matrix.dat "$R/T_bem_p${P}_m${M}.dat"
-echo "ell,${P},${M},${dofs},${recip},${secs}" >> "$R/manifest.csv"
-echo "done p${P}m${M}: dofs=$dofs recip=$recip secs=$secs"
+echo "ell,${P},${M},${dofs},${recip},${secs},${maxrss}" >> "$R/manifest.csv"
+echo "done p${P}m${M}: dofs=$dofs recip=$recip secs=$secs maxrss_kb=$maxrss"
