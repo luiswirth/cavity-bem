@@ -1,11 +1,9 @@
 #include <Bembel/AnsatzSpace>
 #include <Bembel/Geometry>
-#include <Bembel/H2Matrix>
 #include <Bembel/IO>
 #include <Bembel/LinearForm>
 #include <Bembel/Maxwell>
 #include <Eigen/Dense>
-#include <unsupported/Eigen/IterativeSolvers>
 
 #include <array>
 #include <cmath>
@@ -120,13 +118,11 @@ int main(int argc, char *argv[]) {
   std::string sphere_dat = "res/sphere.dat";
   int refinement = 1;
   int poly_deg = 2;
-  std::string solver = "dense";
 
   if (argc > 1) config_path = argv[1];
   if (argc > 2) sphere_dat = argv[2];
   if (argc > 3) refinement = std::stoi(argv[3]);
   if (argc > 4) poly_deg = std::stoi(argv[4]);
-  if (argc > 5) solver = argv[5];
 
   std::filesystem::create_directories("out");
 
@@ -156,11 +152,8 @@ int main(int argc, char *argv[]) {
   std::cout << "  poly degree: " << poly_deg << "\n";
   std::cout << "  dipoles:     " << n_dipoles << "\n";
   std::cout << "  dofs:        " << N << "\n";
-  std::cout << "  solver:      " << solver
-            << (solver == "dense"
-                    ? " (dense matrix ~" + std::to_string(16.0 * double(N) * double(N) / 1e9) + " GB)"
-                    : "")
-            << "\n" << std::flush;
+  std::cout << "  dense matrix: ~" << 16.0 * double(N) * double(N) / 1e9 << " GB\n"
+            << std::flush;
 
   MatrixXcd B(N, n_dipoles);
   for (int d = 0; d < n_dipoles; ++d) {
@@ -173,30 +166,16 @@ int main(int argc, char *argv[]) {
     B.col(d) = disc_lf.get_discrete_linear_form();
   }
 
-  std::cout << "\nAssembling operator (" << solver << ") and solving..." << std::flush;
+  std::cout << "\nAssembling operator (dense) and solving..." << std::flush;
 
   // The Maxwell single-layer (EFIE) is first-kind and badly conditioned, so an
-  // unpreconditioned iterative solve is hopeless. Instead use the H2 path only to
-  // dodge the dense-assembly memory blow-up at high poly_deg: assemble compressed,
-  // materialize the (small) operator, then factor and direct-solve as usual.
-  MatrixXcd Rho(N, n_dipoles);
-  if (solver == "h2") {
-    DiscreteOperator<H2Matrix<complex>, MaxwellSingleLayerOperator> disc_op(ansatz_space);
-    disc_op.get_linear_operator().set_wavenumber(wavenumber);
-    disc_op.compute();
-    std::cout << " [H2 assembled, materializing]" << std::flush;
-    const auto &H = disc_op.get_discrete_operator();
-    MatrixXcd M(N, N);
-    for (int j = 0; j < N; ++j) M.col(j) = H * VectorXcd::Unit(N, j);
-    PartialPivLU<MatrixXcd> lu(M);
-    Rho = lu.solve(B);
-  } else {
-    DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
-    disc_op.get_linear_operator().set_wavenumber(wavenumber);
-    disc_op.compute();
-    PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
-    Rho = lu.solve(B);
-  }
+  // unpreconditioned iterative solve is hopeless. Assemble the dense operator,
+  // factor once, and direct-solve all dipole RHS at once.
+  DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
+  disc_op.get_linear_operator().set_wavenumber(wavenumber);
+  disc_op.compute();
+  PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
+  MatrixXcd Rho = lu.solve(B);
 
   DiscretePotential<MaxwellSingleLayerPotential<MaxwellSingleLayerOperator>,
                     MaxwellSingleLayerOperator>
