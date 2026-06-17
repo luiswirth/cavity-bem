@@ -5,6 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=4G
+#SBATCH --constraint=EPYC_7742
 #
 # Build first on a login node:
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5
