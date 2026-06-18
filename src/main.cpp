@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
   using namespace Bembel;
   using namespace Eigen;
 
-  std::string config_path = "res/config.txt";
+  std::string config_path = "res/config_ellipse.txt";
   std::string sphere_dat = "res/sphere.dat";
   int refinement = 1;
   int poly_deg = 2;

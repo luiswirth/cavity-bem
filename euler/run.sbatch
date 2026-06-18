@@ -20,7 +20,7 @@ read -r P M < <(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
 t0=$SECONDS
 srun --cpu-bind=cores /usr/bin/time -v -o time.txt "$ROOT/build/my_project" \
-  "$ROOT/res/config.txt" "$ROOT/res/sphere.dat" "$M" "$P" > run.log 2>&1
+  "$ROOT/res/config_ellipse.txt" "$ROOT/res/sphere.dat" "$M" "$P" > run.log 2>&1
 secs=$((SECONDS - t0)); log=$(cat run.log); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
 cond=$(echo "$log" | grep -oE 'cond\(A\) = [0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
