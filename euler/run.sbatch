@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=bem
 #SBATCH --account=ls_math
-#SBATCH --output=bem_results/slurm-%A_%a.log
+#SBATCH --output=out/slurm-%A_%a.log
 #SBATCH --time=04:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -14,7 +14,7 @@
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-ROOT=$(pwd); R=$ROOT/bem_results; mkdir -p "$R"
+ROOT=$(pwd); R=$ROOT/out/ellipse; mkdir -p "$R"
 TASKFILE=${1:-euler/bem_grid.txt}
 read -r P M < <(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY_TASK_ID}p")
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
@@ -24,9 +24,9 @@ srun --cpu-bind=cores /usr/bin/time -v -o time.txt "$ROOT/build/my_project" \
 secs=$((SECONDS - t0)); log=$(cat run.log); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
 cond=$(echo "$log" | grep -oE 'cond\(A\) = [0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
-maxrss_kb=$(grep -i "Maximum resident set size" time.txt | grep -oE '[0-9]+' || true)
-cp out/T_matrix.dat "$R/T_bem_p${P}_m${M}.dat"
-# manifest columns: P,M,dofs,secs,maxrss_kb,cond
-echo "${P},${M},${dofs},${secs},${maxrss_kb},${cond}" >> "$R/manifest.csv"
+mem_kb=$(grep -i "Maximum resident set size" time.txt | grep -oE '[0-9]+' || true)
+cp out/T_matrix.dat "$R/T_p${P}_m${M}.dat"
+# manifest columns: P,M,dofs,secs,mem_kb,cond
+echo "${P},${M},${dofs},${secs},${mem_kb},${cond}" >> "$R/manifest.csv"
 echo "$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown),$(hostname),${P},${M},$(date -Is)" >> "$R/provenance.csv"
-echo "done p${P}m${M}: dofs=$dofs cond=$cond secs=$secs maxrss_kb=$maxrss_kb"
+echo "done p${P}m${M}: dofs=$dofs cond=$cond secs=$secs mem_kb=$mem_kb"
