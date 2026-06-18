@@ -9,18 +9,19 @@
 #SBATCH --constraint=EPYC_7742
 #
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5 && cmake --build build -j8 --target my_project
-#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch                    # grid
-#   mkdir -p out/logs && sbatch --array=1    euler/run.sbatch euler/bem_ref.txt  # finer reference
+#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch ellipse
+#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch sphere
+#   mkdir -p out/logs && sbatch --array=1    euler/run.sbatch ellipse euler/bem_ref.txt
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-ROOT=$(pwd); R=$ROOT/out/ellipse; mkdir -p "$R" "$ROOT/out/logs"
-TASKFILE=${1:-euler/bem_grid.txt}
+GEOM=$1; ROOT=$(pwd); R=$ROOT/out/$GEOM; mkdir -p "$R" "$ROOT/out/logs"
+TASKFILE=${2:-euler/bem_grid.txt}
 read -r P M < <(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY_TASK_ID}p")
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
 t0=$SECONDS
 srun --cpu-bind=cores /usr/bin/time -v -o time.txt "$ROOT/build/my_project" \
-  "$ROOT/res/config_ellipse.txt" "$ROOT/res/sphere.dat" "$M" "$P" > run.log 2>&1
+  "$ROOT/res/config_${GEOM}.txt" "$ROOT/res/sphere.dat" "$M" "$P" > run.log 2>&1
 secs=$((SECONDS - t0)); log=$(cat run.log); echo "$log"
 dofs=$(echo "$log" | grep -oE 'dofs:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
 cond=$(echo "$log" | grep -oE 'cond\(A\) = [0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
