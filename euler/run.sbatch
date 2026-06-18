@@ -9,14 +9,13 @@
 #SBATCH --constraint=EPYC_7742
 #
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5 && cmake --build build -j8 --target my_project
-#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch ellipse
-#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch sphere
-#   mkdir -p out/logs && sbatch --array=1    euler/run.sbatch ellipse euler/bem_ref.txt
+#   euler/submit_grid.sh [geom]   # convergence grid
+#   euler/submit_ref.sh  [geom]   # single high-fidelity reference run
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-GEOM=$1; ROOT=$(pwd); R=$ROOT/out/$GEOM; mkdir -p "$R" "$ROOT/out/logs"
-TASKFILE=${2:-euler/bem_grid.txt}
+GEOM=$1; MODE=$2; TASKFILE=$3
+ROOT=$(pwd); R=$ROOT/out/$MODE/$GEOM; mkdir -p "$R" "$ROOT/out/logs"
 read -r P M < <(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY_TASK_ID}p")
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
 t0=$SECONDS

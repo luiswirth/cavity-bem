@@ -6,7 +6,8 @@ Built on [Bembel](https://github.com/temf/bembel). Runs on ETH Euler.
 ## Euler
 
     euler/build.sh                  # cmake configure + build (once)
-    euler/submit.sh                 # sbatch 2D (p,m) grid -> out/ellipse/
+    euler/submit_grid.sh [geom]     # sbatch 2D (p,m) convergence grid
+    euler/submit_ref.sh  [geom]     # sbatch single high-fidelity reference run
 
-Output: `out/ellipse/T_p{p}_m{m}.dat`, `manifest.csv`, `provenance.csv`.
+Output: `out/{grid,ref}/{shape}/T_p{p}_m{m}.dat`, `manifest.csv`, `provenance.csv`.
 Pull results into cavity-benchmark with `./pull-euler.sh`.
