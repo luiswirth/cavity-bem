@@ -1,8 +1,2 @@
 # poly_deg refinement
-# High-fidelity reference only (NOT a convergence-grid point): p6/m4, recip
-# ~2.5e-10, beats p5/m4. Run as a one-off, give it a longer walltime/more RAM:
-#   sbatch --array=1 --time=04:00:00 euler/run.sbatch euler/bem_ref.txt
-# It lands in bem_results as T_bem_p6_m4.dat + a manifest row; aggregate then
-# auto-selects it (lowest recip) as the reference and excludes it from the
-# convergence table.
 6 4

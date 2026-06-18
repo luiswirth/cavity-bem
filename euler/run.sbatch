@@ -7,23 +7,18 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=16G
 #SBATCH --constraint=EPYC_7742
-##SBATCH --exclusive
 #
 # Build first on a login node:
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5
 #   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 #   cmake --build build -j8 --target my_project
 # Submit one (p,m) per array index of a task file (default euler/bem_grid.txt):
-#   sbatch --array=1-20 euler/run.sbatch                 # convergence grid (shared nodes)
-#   sbatch --array=1    euler/run.sbatch euler/bem_ref.txt  # p6/m4 reference (one-off)
+#   sbatch --array=1-20 euler/run.sbatch                    # convergence grid
+#   sbatch --array=1    euler/run.sbatch euler/bem_ref.txt  # a separate finer reference
 # Then post-process locally (aggregate reads the manifest + saved T's). Mirrors
 # the EP-GP side: sbatch the array, pull results, aggregate locally.
-# BEM peak RSS is large (~200 GiB at the p6/m4 corner: Bembel superspace assembly
+# BEM peak RSS is large (~200 GiB at a high-p corner: Bembel superspace assembly
 # plus the LU copy), so 16G/cpu = 256 GiB; it fits the ~489 GiB EPYC_7742 nodes.
-# Node policy: peak RSS is contention-independent, so the grid runs on SHARED
-# nodes and its memory is still valid; only wall-time needs an isolated node --
-# run the matched runtime comparison separately with --exclusive:
-#   sbatch --exclusive --mem-per-cpu=3G --array=20 euler/run.sbatch   # p5/m4, clean timing
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
