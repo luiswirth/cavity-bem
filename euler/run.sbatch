@@ -9,8 +9,8 @@
 #SBATCH --constraint=EPYC_7742
 #
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5 && cmake --build build -j8 --target my_project
-#   sbatch --array=1-20 euler/run.sbatch                    # grid
-#   sbatch --array=1    euler/run.sbatch euler/bem_ref.txt  # finer reference
+#   mkdir -p out/logs && sbatch --array=1-20 euler/run.sbatch                    # grid
+#   mkdir -p out/logs && sbatch --array=1    euler/run.sbatch euler/bem_ref.txt  # finer reference
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
