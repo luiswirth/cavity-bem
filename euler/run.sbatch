@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=bem
 #SBATCH --account=ls_math
-#SBATCH --output=out/slurm-%A_%a.log
+#SBATCH --output=out/logs/slurm-%A_%a.log
 #SBATCH --time=04:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -14,7 +14,7 @@
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-ROOT=$(pwd); R=$ROOT/out/ellipse; mkdir -p "$R"
+ROOT=$(pwd); R=$ROOT/out/ellipse; mkdir -p "$R" "$ROOT/out/logs"
 TASKFILE=${1:-euler/bem_grid.txt}
 read -r P M < <(grep -vE '^\s*#|^\s*$' "$ROOT/$TASKFILE" | sed -n "${SLURM_ARRAY_TASK_ID}p")
 work=$R/work/p${P}_m${M}; rm -rf "$work"; mkdir -p "$work"; cd "$work"
