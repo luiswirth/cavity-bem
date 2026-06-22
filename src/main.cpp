@@ -110,30 +110,55 @@ void write_complex_matrix(const std::string &path, const Eigen::MatrixXcd &mat) 
   }
 }
 
-int main(int argc, char *argv[]) {
+static constexpr const char *SPHERE_DAT = "res/sphere.dat";
+
+// ksweep: assemble the EFIE operator over a wavenumber grid and record its
+// condition number per k. No RHS, solve, or operator T -- the conditioning of
+// the boundary integral operator alone detects interior cavity resonances.
+int run_ksweep(const Config &config, int refinement, int poly_deg,
+               double kmin, double kmax, int nk) {
   using namespace Bembel;
   using namespace Eigen;
 
-  std::string config_path = "res/config_ellipse.txt";
-  std::string sphere_dat = "res/sphere.dat";
-  int refinement = 1;
-  int poly_deg = 2;
+  Geometry geometry = make_ellipsoid(SPHERE_DAT, config.semiaxes(0),
+                                     config.semiaxes(1), config.semiaxes(2));
+  AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
 
-  if (argc > 1) config_path = argv[1];
-  if (argc > 2) sphere_dat = argv[2];
-  if (argc > 3) refinement = std::stoi(argv[3]);
-  if (argc > 4) poly_deg = std::stoi(argv[4]);
+  std::cout << "=== BEM wavenumber sweep ===\n";
+  std::cout << "  refinement:  " << refinement << "\n";
+  std::cout << "  poly degree: " << poly_deg << "\n";
+  std::cout << "  dofs:        " << ansatz_space.get_number_of_dofs() << "\n";
+  std::cout << "  k range:     [" << kmin << ", " << kmax << "], " << nk << " points\n"
+            << std::flush;
 
-  std::filesystem::create_directories("out");
+  std::ofstream out("out/ksweep.csv");
+  if (!out) throw std::runtime_error("cannot open out/ksweep.csv");
+  out << "k,cond\n" << std::setprecision(10);
+  for (int i = 0; i < nk; ++i) {
+    double kk = nk > 1 ? kmin + (kmax - kmin) * i / (nk - 1) : kmin;
+    DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
+    disc_op.get_linear_operator().set_wavenumber(complex(kk, 0.0));
+    disc_op.compute();
+    double cond = 1.0 / PartialPivLU<MatrixXcd>(disc_op.get_discrete_operator()).rcond();
+    out << kk << "," << cond << "\n" << std::flush;
+    std::cout << "k=" << kk << " cond=" << cond << "\n" << std::flush;
+  }
+  std::cout << "wrote out/ksweep.csv\n";
+  return 0;
+}
 
-  Config config = load_config(config_path);
+// operator: assemble the dipole reaction operator T at a fixed (refinement,
+// poly_deg) and write it to disk, with the EFIE system condition number.
+int run_operator(const Config &config, int refinement, int poly_deg) {
+  using namespace Bembel;
+  using namespace Eigen;
 
   double k = config.k;
   complex wavenumber(k, 0.0);
   int n_points = config.points.rows();
   int n_dipoles = 2 * n_points;
 
-  Geometry geometry = make_ellipsoid(sphere_dat, config.semiaxes(0),
+  Geometry geometry = make_ellipsoid(SPHERE_DAT, config.semiaxes(0),
                                      config.semiaxes(1), config.semiaxes(2));
 
   std::vector<Vector3d> z(n_dipoles), pol(n_dipoles);
@@ -222,4 +247,35 @@ int main(int argc, char *argv[]) {
   std::cout << "wrote out/T_matrix.dat (" << n_dipoles << " x " << n_dipoles << ")\n";
 
   return 0;
+}
+
+int main(int argc, char *argv[]) {
+  // usage:
+  //   my_project operator <config> <refinement> <poly_deg>
+  //   my_project ksweep   <config> <refinement> <poly_deg> <kmin> <kmax> <nk>
+  if (argc < 2) {
+    std::cerr << "usage: " << argv[0]
+              << " operator|ksweep <config> <refinement> <poly_deg> [kmin kmax nk]\n";
+    return 1;
+  }
+  std::string mode = argv[1];
+  std::string config_path = argc > 2 ? argv[2] : "res/config_ellipse.txt";
+  int refinement = argc > 3 ? std::stoi(argv[3]) : 1;
+  int poly_deg = argc > 4 ? std::stoi(argv[4]) : 2;
+
+  std::filesystem::create_directories("out");
+  Config config = load_config(config_path);
+
+  if (mode == "operator") {
+    return run_operator(config, refinement, poly_deg);
+  } else if (mode == "ksweep") {
+    if (argc < 8) {
+      std::cerr << "ksweep needs: <config> <refinement> <poly_deg> <kmin> <kmax> <nk>\n";
+      return 1;
+    }
+    return run_ksweep(config, refinement, poly_deg,
+                      std::stod(argv[5]), std::stod(argv[6]), std::stoi(argv[7]));
+  }
+  std::cerr << "unknown mode '" << mode << "' (expected operator|ksweep)\n";
+  return 1;
 }
