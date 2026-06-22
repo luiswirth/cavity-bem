@@ -137,7 +137,10 @@ int run_ksweep(const Config &config, const std::string &sphere_dat,
     DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
     disc_op.get_linear_operator().set_wavenumber(complex(kk, 0.0));
     disc_op.compute();
-    double cond = 1.0 / PartialPivLU<MatrixXcd>(disc_op.get_discrete_operator()).rcond();
+    // Exact 2-norm condition number from the singular values (sigma_max /
+    // sigma_min), free of the 1-norm rcond estimator's occasional outliers.
+    auto sv = BDCSVD<MatrixXcd>(disc_op.get_discrete_operator()).singularValues();
+    double cond = sv(0) / sv(sv.size() - 1);
     out << kk << "," << cond << "\n" << std::flush;
     std::cout << "k=" << kk << " cond=" << cond << "\n" << std::flush;
   }
