@@ -4,8 +4,9 @@
 #SBATCH --output=out/logs/slurm-%A.log
 #SBATCH --time=04:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=128
 #SBATCH --mem-per-cpu=2G
+#SBATCH --constraint=EPYC_7742
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
