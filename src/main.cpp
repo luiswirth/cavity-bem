@@ -110,17 +110,15 @@ void write_complex_matrix(const std::string &path, const Eigen::MatrixXcd &mat) 
   }
 }
 
-static constexpr const char *SPHERE_DAT = "res/sphere.dat";
-
 // ksweep: assemble the EFIE operator over a wavenumber grid and record its
 // condition number per k. No RHS, solve, or operator T -- the conditioning of
 // the boundary integral operator alone detects interior cavity resonances.
-int run_ksweep(const Config &config, int refinement, int poly_deg,
-               double kmin, double kmax, int nk) {
+int run_ksweep(const Config &config, const std::string &sphere_dat,
+               int refinement, int poly_deg, double kmin, double kmax, int nk) {
   using namespace Bembel;
   using namespace Eigen;
 
-  Geometry geometry = make_ellipsoid(SPHERE_DAT, config.semiaxes(0),
+  Geometry geometry = make_ellipsoid(sphere_dat, config.semiaxes(0),
                                      config.semiaxes(1), config.semiaxes(2));
   AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
 
@@ -149,7 +147,8 @@ int run_ksweep(const Config &config, int refinement, int poly_deg,
 
 // operator: assemble the dipole reaction operator T at a fixed (refinement,
 // poly_deg) and write it to disk, with the EFIE system condition number.
-int run_operator(const Config &config, int refinement, int poly_deg) {
+int run_operator(const Config &config, const std::string &sphere_dat,
+                 int refinement, int poly_deg) {
   using namespace Bembel;
   using namespace Eigen;
 
@@ -158,7 +157,7 @@ int run_operator(const Config &config, int refinement, int poly_deg) {
   int n_points = config.points.rows();
   int n_dipoles = 2 * n_points;
 
-  Geometry geometry = make_ellipsoid(SPHERE_DAT, config.semiaxes(0),
+  Geometry geometry = make_ellipsoid(sphere_dat, config.semiaxes(0),
                                      config.semiaxes(1), config.semiaxes(2));
 
   std::vector<Vector3d> z(n_dipoles), pol(n_dipoles);
@@ -265,15 +264,18 @@ int main(int argc, char *argv[]) {
 
   std::filesystem::create_directories("out");
   Config config = load_config(config_path);
+  // sphere.dat lives next to the config, so it resolves regardless of cwd.
+  std::string sphere_dat =
+      (std::filesystem::path(config_path).parent_path() / "sphere.dat").string();
 
   if (mode == "operator") {
-    return run_operator(config, refinement, poly_deg);
+    return run_operator(config, sphere_dat, refinement, poly_deg);
   } else if (mode == "ksweep") {
     if (argc < 8) {
       std::cerr << "ksweep needs: <config> <refinement> <poly_deg> <kmin> <kmax> <nk>\n";
       return 1;
     }
-    return run_ksweep(config, refinement, poly_deg,
+    return run_ksweep(config, sphere_dat, refinement, poly_deg,
                       std::stod(argv[5]), std::stod(argv[6]), std::stoi(argv[7]));
   }
   std::cerr << "unknown mode '" << mode << "' (expected operator|ksweep)\n";
