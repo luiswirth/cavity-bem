@@ -165,7 +165,10 @@ int run_operator(const Config &config, const std::string &sphere_dat,
   AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
   const int N = ansatz_space.get_number_of_dofs();
 
-  std::cout << "=== PEC Ellipsoidal Cavity BEM Solver ===\n";
+  const std::string shape = (config.semiaxes(0) == config.semiaxes(1) &&
+                             config.semiaxes(1) == config.semiaxes(2))
+                             ? "Spherical" : "Ellipsoidal";
+  std::cout << "=== PEC " << shape << " Cavity BEM Solver ===\n";
   std::cout << "  k:           " << k << "\n";
   std::cout << "  refinement:  " << refinement << "\n";
   std::cout << "  poly degree: " << poly_deg << "\n";
