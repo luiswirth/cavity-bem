@@ -33,15 +33,15 @@ cmake --preset default && cmake --build build --target my_project
 
 ## Run locally
 
-`run_local.sh` runs the convergence grid (or reference) serially, no scheduler:
+`run_local.sh` runs the convergence grid serially, no scheduler:
 
 ```bash
 ./run_local.sh grid            # 2D (p, m) grid, both shapes
-./run_local.sh ref ellipse     # single high-fidelity reference run
 ```
 
-The taskfiles `euler/grid.txt` (columns `poly_deg refinement`) and
-`euler/ref.txt` define the runs. To run a single point directly:
+The taskfile `euler/grid.txt` (columns `poly_deg refinement`) defines the runs.
+The reference operator is the most refined grid run, not a separate run. To run a
+single point directly:
 
 ```bash
 build/my_project operator res/config_ellipse.txt <refinement> <poly_deg>
@@ -55,7 +55,6 @@ estimate); pick a subset for a laptop.
 ```bash
 euler/build.sh                 # module load + cmake build
 euler/submit_grid.sh [shape]   # sbatch 2D (p, m) convergence grid
-euler/submit_ref.sh  [shape]   # sbatch p6/m4 reference run (bigmem)
 ```
 
 The SLURM account, node constraint, and `module load` lines in `euler/run.sbatch`
@@ -64,7 +63,7 @@ SLURM site.
 
 ## Output
 
-Per shape, under `out/{grid,ref}/{shape}/`:
+Per shape, under `out/grid/{shape}/`:
 
 - `T_p{p}_m{m}.dat` reaction operator (whitespace `real imag` per entry)
 - `manifest.csv` columns `p,m,dofs,secs,mem_kb,cond`
