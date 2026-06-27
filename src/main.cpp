@@ -110,38 +110,6 @@ void write_complex_matrix(const std::string &path, const Eigen::MatrixXcd &mat) 
   }
 }
 
-int run_ksweep(const Config &config, const std::string &sphere_dat,
-               int refinement, int poly_deg, double kmin, double kmax, int nk) {
-  using namespace Bembel;
-  using namespace Eigen;
-
-  Geometry geometry = make_ellipsoid(sphere_dat, config.semiaxes(0),
-                                     config.semiaxes(1), config.semiaxes(2));
-  AnsatzSpace<MaxwellSingleLayerOperator> ansatz_space(geometry, refinement, poly_deg);
-
-  std::cout << "=== BEM wavenumber sweep ===\n";
-  std::cout << "  refinement:  " << refinement << "\n";
-  std::cout << "  poly degree: " << poly_deg << "\n";
-  std::cout << "  dofs:        " << ansatz_space.get_number_of_dofs() << "\n";
-  std::cout << "  k range:     [" << kmin << ", " << kmax << "], " << nk << " points\n"
-            << std::flush;
-
-  std::ofstream out("out/ksweep.csv");
-  if (!out) throw std::runtime_error("cannot open out/ksweep.csv");
-  out << "k,cond\n" << std::setprecision(10);
-  for (int i = 0; i < nk; ++i) {
-    double kk = nk > 1 ? kmin + (kmax - kmin) * i / (nk - 1) : kmin;
-    DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
-    disc_op.get_linear_operator().set_wavenumber(complex(kk, 0.0));
-    disc_op.compute();
-    double cond = 1.0 / PartialPivLU<MatrixXcd>(disc_op.get_discrete_operator()).rcond();
-    out << kk << "," << cond << "\n" << std::flush;
-    std::cout << "k=" << kk << " cond=" << cond << "\n" << std::flush;
-  }
-  std::cout << "wrote out/ksweep.csv\n";
-  return 0;
-}
-
 int run_operator(const Config &config, const std::string &sphere_dat,
                  int refinement, int poly_deg) {
   using namespace Bembel;
@@ -245,7 +213,7 @@ int run_operator(const Config &config, const std::string &sphere_dat,
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "usage: " << argv[0]
-              << " operator|ksweep <config> <refinement> <poly_deg> [kmin kmax nk]\n";
+              << " operator <config> <refinement> <poly_deg>\n";
     return 1;
   }
   std::string mode = argv[1];
@@ -261,14 +229,7 @@ int main(int argc, char *argv[]) {
 
   if (mode == "operator") {
     return run_operator(config, sphere_dat, refinement, poly_deg);
-  } else if (mode == "ksweep") {
-    if (argc < 8) {
-      std::cerr << "ksweep needs: <config> <refinement> <poly_deg> <kmin> <kmax> <nk>\n";
-      return 1;
-    }
-    return run_ksweep(config, sphere_dat, refinement, poly_deg,
-                      std::stod(argv[5]), std::stod(argv[6]), std::stoi(argv[7]));
   }
-  std::cerr << "unknown mode '" << mode << "' (expected operator|ksweep)\n";
+  std::cerr << "unknown mode '" << mode << "' (expected operator)\n";
   return 1;
 }
