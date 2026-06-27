@@ -15,7 +15,6 @@
 #
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5 && cmake --build build -j8 --target my_project
 #   euler/submit_grid.sh [geom]   # convergence grid
-#   euler/submit_ref.sh  [geom]   # single high-fidelity reference run
 set -euo pipefail
 module load stack/2025-06 gcc/12.2.0
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK

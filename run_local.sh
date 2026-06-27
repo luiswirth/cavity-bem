@@ -1,9 +1,8 @@
 #!/bin/bash
-# Run the BEM convergence grid (or reference) locally, without SLURM.
+# Run the BEM convergence grid locally, without SLURM.
 # Serial port of euler/run.sbatch for reproduction on any machine.
 #
 #   ./run_local.sh grid [geom...]   # 2D (p,m) convergence grid
-#   ./run_local.sh ref  [geom...]   # single high-fidelity reference run
 #
 # geom defaults to: ellipse sphere. Build the binary first:
 #   cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j --target my_project
@@ -15,8 +14,7 @@ set -euo pipefail
 MODE="${1:-grid}"; shift || true
 case "$MODE" in
   grid) TASKFILE=euler/grid.txt;;
-  ref)  TASKFILE=euler/ref.txt;;
-  *) echo "usage: $0 grid|ref [geom...]" >&2; exit 1;;
+  *) echo "usage: $0 grid [geom...]" >&2; exit 1;;
 esac
 [[ $# -eq 0 ]] && set -- ellipse sphere
 
