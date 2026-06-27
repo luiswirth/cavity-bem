@@ -1,4 +1,7 @@
 #!/bin/bash
+# === SLURM site config (ETH Euler) ===========================================
+# Edit the --account, --constraint, and the `module load` line below for a
+# different cluster; drop them entirely to run locally via ../run_local.sh.
 #SBATCH --job-name=bem
 #SBATCH --account=ls_math
 #SBATCH --output=out/logs/slurm-%A_%a.log
@@ -8,6 +11,7 @@
 #SBATCH --mem-per-cpu=2G
 #SBATCH --exclusive
 #SBATCH --constraint=EPYC_7742
+# =============================================================================
 #
 #   module load stack/2025-06 gcc/12.2.0 cmake/3.30.5 && cmake --build build -j8 --target my_project
 #   euler/submit_grid.sh [geom]   # convergence grid

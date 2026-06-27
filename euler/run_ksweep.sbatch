@@ -1,4 +1,6 @@
 #!/bin/bash
+# SLURM site config (ETH Euler): edit --account, --constraint, and `module load`
+# for a different cluster.
 #SBATCH --job-name=bem-ksweep
 #SBATCH --account=ls_math
 #SBATCH --output=out/logs/slurm-%A.log

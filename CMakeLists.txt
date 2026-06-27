@@ -19,9 +19,11 @@ include(FetchContent)
 FetchContent_Declare(
   eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG 3.4.0
+  GIT_TAG 3.4.1
 )
 FetchContent_MakeAvailable(eigen)
+# Pinned to v1.0: Bembel is the BEM reference solver, so its version defines the
+# reference operator numerics. Kept fixed for reproducibility (newer: v1.1, v1.2).
 FetchContent_Declare(
   bembel
   GIT_REPOSITORY https://github.com/temf/bembel.git
