@@ -110,9 +110,6 @@ void write_complex_matrix(const std::string &path, const Eigen::MatrixXcd &mat) 
   }
 }
 
-// ksweep: assemble the EFIE operator over a wavenumber grid and record its
-// condition number per k. No RHS, solve, or operator T -- the conditioning of
-// the boundary integral operator alone detects interior cavity resonances.
 int run_ksweep(const Config &config, const std::string &sphere_dat,
                int refinement, int poly_deg, double kmin, double kmax, int nk) {
   using namespace Bembel;
@@ -137,10 +134,7 @@ int run_ksweep(const Config &config, const std::string &sphere_dat,
     DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
     disc_op.get_linear_operator().set_wavenumber(complex(kk, 0.0));
     disc_op.compute();
-    // Exact 2-norm condition number from the singular values (sigma_max /
-    // sigma_min), free of the 1-norm rcond estimator's occasional outliers.
-    auto sv = BDCSVD<MatrixXcd>(disc_op.get_discrete_operator()).singularValues();
-    double cond = sv(0) / sv(sv.size() - 1);
+    double cond = 1.0 / PartialPivLU<MatrixXcd>(disc_op.get_discrete_operator()).rcond();
     out << kk << "," << cond << "\n" << std::flush;
     std::cout << "k=" << kk << " cond=" << cond << "\n" << std::flush;
   }
@@ -148,8 +142,6 @@ int run_ksweep(const Config &config, const std::string &sphere_dat,
   return 0;
 }
 
-// operator: assemble the dipole reaction operator T at a fixed (refinement,
-// poly_deg) and write it to disk, with the EFIE system condition number.
 int run_operator(const Config &config, const std::string &sphere_dat,
                  int refinement, int poly_deg) {
   using namespace Bembel;
@@ -195,15 +187,11 @@ int run_operator(const Config &config, const std::string &sphere_dat,
 
   std::cout << "\nAssembling operator (dense) and solving..." << std::flush;
 
-  // The Maxwell single-layer (EFIE) is first-kind and badly conditioned, so an
-  // unpreconditioned iterative solve is hopeless. Assemble the dense operator,
-  // factor once, and direct-solve all dipole RHS at once.
+  // EFIE is first-kind and badly conditioned; direct dense solve, factored once for all RHS.
   DiscreteOperator<MatrixXcd, MaxwellSingleLayerOperator> disc_op(ansatz_space);
   disc_op.get_linear_operator().set_wavenumber(wavenumber);
   disc_op.compute();
   PartialPivLU<MatrixXcd> lu(disc_op.get_discrete_operator());
-  // Cheap 1-norm reciprocal condition estimate of the EFIE system matrix (reuses
-  // the LU; no extra factorization), reported alongside EP-GP's system cond.
   double cond_sys = 1.0 / lu.rcond();
   std::cout << "cond(A) = " << cond_sys << "\n" << std::flush;
   MatrixXcd Rho = lu.solve(B);
@@ -252,9 +240,6 @@ int run_operator(const Config &config, const std::string &sphere_dat,
 }
 
 int main(int argc, char *argv[]) {
-  // usage:
-  //   my_project operator <config> <refinement> <poly_deg>
-  //   my_project ksweep   <config> <refinement> <poly_deg> <kmin> <kmax> <nk>
   if (argc < 2) {
     std::cerr << "usage: " << argv[0]
               << " operator|ksweep <config> <refinement> <poly_deg> [kmin kmax nk]\n";
