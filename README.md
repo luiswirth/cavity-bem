@@ -7,7 +7,7 @@ transmit-to-receive reaction operator `T`, and writes it to disk. Built on the
 [Bembel](https://github.com/temf/bembel) isogeometric BEM library.
 
 This is the deterministic baseline against which the EPGP solver
-([cavity-epgp](https://github.com/luiswirth/cavity-epgp)) is cross-validated.
+([cavity-maxwell](https://github.com/luiswirth/cavity-maxwell)) is cross-validated.
 The cavity geometry is set entirely by the semi-axes in `res/config_{shape}.txt`;
 the same base sphere NURBS mesh (`res/sphere.dat`) is scaled accordingly.
 
